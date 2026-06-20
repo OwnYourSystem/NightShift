@@ -1,0 +1,5 @@
+# quantize_numpy.py needs only numpy.
+# quantize_real.py + speed_sweep.py need torch + transformers (CPU is fine).
+numpy>=1.26
+torch>=2.2
+transformers>=4.40

@@ -1,0 +1,24 @@
+{
+  "toy_model": {
+    "layers": 6,
+    "dim": 256,
+    "total_weights": 393216
+  },
+  "memory": {
+    "fp32_kb": 1536.0,
+    "int8_kb": 384.0,
+    "reduction_x": 4.0,
+    "per_channel_scale_overhead_kb": 6.0
+  },
+  "quality": {
+    "per_tensor": {
+      "relative_error_pct": 12.411,
+      "cosine_similarity": 0.992619
+    },
+    "per_channel": {
+      "relative_error_pct": 2.401,
+      "cosine_similarity": 0.999723
+    }
+  },
+  "note_on_speed": "Pure-NumPy INT8 matmul is not faster on CPU; the speed win is a hardware property (INT8 kernels / GGUF on the target device). See quantize_real.py for measured CPU speedup via PyTorch."
+}

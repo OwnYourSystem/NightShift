@@ -1,0 +1,30 @@
+{
+  "model": "EleutherAI/pythia-70m",
+  "cpu_threads": 12,
+  "sweep": [
+    {
+      "seq_len": 8,
+      "fp32_tok_s": 342.8,
+      "int8_tok_s": 154.8,
+      "int8_speedup_x": 0.45
+    },
+    {
+      "seq_len": 32,
+      "fp32_tok_s": 911.7,
+      "int8_tok_s": 244.8,
+      "int8_speedup_x": 0.27
+    },
+    {
+      "seq_len": 128,
+      "fp32_tok_s": 1227.3,
+      "int8_tok_s": 767.1,
+      "int8_speedup_x": 0.63
+    },
+    {
+      "seq_len": 512,
+      "fp32_tok_s": 1690.7,
+      "int8_tok_s": 1893.1,
+      "int8_speedup_x": 1.12
+    }
+  ]
+}
