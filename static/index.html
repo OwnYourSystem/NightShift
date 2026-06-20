@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>&#9838; NightShift &mdash; Overnight Model Optimization</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --red: #f85149;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1rem;
+    }
+    header { text-align: center; margin-bottom: 2.5rem; }
+    header h1 { font-size: 2rem; font-weight: 600; letter-spacing: -0.5px; }
+    header p { color: var(--muted); margin-top: 0.5rem; font-size: 0.95rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 560px;
+    }
+    .field { margin-bottom: 1.25rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem; color: var(--muted); }
+    input[type="text"], input[type="email"], input[type="number"], select, textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 0.5rem 0.75rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 60px; }
+    .row { display: flex; gap: 1rem; }
+    .row .field { flex: 1; }
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.over { border-color: var(--accent); background: rgba(88,166,255,0.05); }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .drop-zone p { color: var(--muted); font-size: 0.85rem; }
+    .drop-zone .filename { color: var(--accent); font-size: 0.9rem; margin-top: 0.4rem; font-weight: 500; }
+    button[type="submit"] {
+      width: 100%;
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-top: 0.5rem;
+    }
+    button[type="submit"]:hover { opacity: 0.88; }
+    button[type="submit"]:disabled { opacity: 0.4; cursor: not-allowed; }
+    #progress-section { display: none; margin-top: 2rem; }
+    .progress-bar-track {
+      background: var(--border);
+      border-radius: 999px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .progress-bar-fill {
+      background: var(--accent);
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .status-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--muted); }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .badge-queued    { background: rgba(139,148,158,0.15); color: var(--muted); }
+    .badge-running   { background: rgba(88,166,255,0.15);  color: var(--accent); }
+    .badge-completed { background: rgba(63,185,80,0.15);   color: var(--green); }
+    .badge-failed    { background: rgba(248,81,73,0.15);   color: var(--red); }
+    #metric-display { margin-top: 1rem; font-size: 0.88rem; color: var(--muted); }
+    #metric-display strong { color: var(--text); }
+    #artifacts { display: none; margin-top: 1.5rem; }
+    #artifacts h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem; }
+    .artifact-link {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      transition: border-color 0.15s;
+    }
+    .artifact-link:hover { border-color: var(--accent); }
+    #error-box {
+      display: none; margin-top: 1rem;
+      background: rgba(248,81,73,0.1);
+      border: 1px solid var(--red);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      font-size: 0.82rem;
+      color: var(--red);
+    }
+    footer { margin-top: 3rem; font-size: 0.78rem; color: var(--muted); text-align: center; }
+    footer a { color: inherit; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>&#9838; NightShift</h1>
+    <p>Upload your model tonight. Wake up to a better one.</p>
+  </header>
+
+  <div class="card">
+    <form id="upload-form">
+      <div class="field">
+        <label for="email">Your email</label>
+        <input type="email" id="email" name="customer_email" placeholder="you@example.com" required />
+      </div>
+
+      <div class="field">
+        <label>Model file</label>
+        <div class="drop-zone" id="drop-zone">
+          <div class="icon">&#128230;</div>
+          <p>Drag &amp; drop or click to select</p>
+          <p style="margin-top:0.25rem;font-size:0.75rem;">.pt .pth .bin .safetensors .onnx .gguf .zip .tar .gz &mdash; up to 2 GB</p>
+          <div class="filename" id="filename-display"></div>
+          <input type="file" id="model-file" name="model_file"
+            accept=".pt,.pth,.bin,.safetensors,.onnx,.gguf,.zip,.tar,.gz" required />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="metric-name">Metric name</label>
+          <input type="text" id="metric-name" name="metric_name" value="val_bpb" />
+        </div>
+        <div class="field">
+          <label for="metric-direction">Direction</label>
+          <select id="metric-direction" name="metric_direction">
+            <option value="lower" selected>Lower is better</option>
+            <option value="higher">Higher is better</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="max-experiments">Max experiments</label>
+        <input type="number" id="max-experiments" name="max_experiments" value="100" min="1" max="500" />
+      </div>
+
+      <div class="field">
+        <label for="notes">Notes (optional)</label>
+        <textarea id="notes" name="notes"
+          placeholder="e.g. focus on memory reduction, keep accuracy above 0.85&hellip;"></textarea>
+      </div>
+
+      <button type="submit" id="submit-btn">&#9838; Start optimization</button>
+    </form>
+
+    <div id="progress-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <span style="font-size:0.85rem;font-weight:500;">Job <code id="job-id-display"></code></span>
+        <span class="badge" id="status-badge"></span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <div class="status-row">
+        <span id="experiments-done">0 experiments run</span>
+        <span id="experiments-label"></span>
+      </div>
+      <div id="metric-display"></div>
+      <div id="error-box"></div>
+      <div id="artifacts">
+        <h3>Artifacts ready</h3>
+        <a class="artifact-link" id="link-report" href="#">
+          &#128196; report.md &mdash; headline results &amp; kept improvements
+        </a>
+        <a class="artifact-link" id="link-tsv" href="#">
+          &#128202; results.tsv &mdash; full experiment log
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <footer>NightShift &middot; Phase 1 MVP &middot; <a href="/api/jobs">all jobs &rarr;</a></footer>
+
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('model-file');
+    const filenameDisplay = document.getElementById('filename-display');
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault(); dropZone.classList.remove('over');
+      if (e.dataTransfer.files[0]) { fileInput.files = e.dataTransfer.files; showFilename(fileInput.files[0].name); }
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) showFilename(fileInput.files[0].name); });
+    function showFilename(name) { filenameDisplay.textContent = name; }
+
+    document.getElementById('upload-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true; btn.textContent = 'Uploading…';
+      try {
+        const res = await fetch('/api/jobs', { method: 'POST', body: new FormData(e.target) });
+        if (!res.ok) throw new Error(await res.text());
+        const { job_id } = await res.json();
+        showProgress(job_id);
+        poll(job_id);
+      } catch (err) {
+        btn.disabled = false; btn.textContent = '☾ Start optimization';
+        alert('Upload failed: ' + err.message);
+      }
+    });
+
+    function showProgress(jobId) {
+      document.getElementById('upload-form').style.display = 'none';
+      document.getElementById('progress-section').style.display = 'block';
+      document.getElementById('job-id-display').textContent = jobId;
+      document.getElementById('link-report').href = '/api/jobs/' + jobId + '/report.md';
+      document.getElementById('link-tsv').href = '/api/jobs/' + jobId + '/results.tsv';
+    }
+
+    const BADGE = { queued: 'badge-queued', running: 'badge-running', completed: 'badge-completed', failed: 'badge-failed' };
+
+    async function poll(jobId) {
+      let delay = 1500;
+      while (true) {
+        await new Promise(r => setTimeout(r, delay));
+        try {
+          const d = await fetch('/api/jobs/' + jobId).then(r => r.json());
+          const badge = document.getElementById('status-badge');
+          badge.textContent = d.status;
+          badge.className = 'badge ' + (BADGE[d.status] || '');
+          const done = d.experiments_done || 0, total = d.experiments_total || 100;
+          document.getElementById('progress-fill').style.width = (done / total * 100).toFixed(1) + '%';
+          document.getElementById('experiments-done').textContent = done + ' / ' + total + ' experiments';
+          document.getElementById('experiments-label').textContent = d.status === 'completed' ? 'done' : 'running…';
+          if (d.baseline_metric != null && d.best_metric != null) {
+            const delta = d.best_metric - d.baseline_metric;
+            const pct = (delta / d.baseline_metric * 100).toFixed(2);
+            document.getElementById('metric-display').innerHTML =
+              'Baseline <strong>' + d.baseline_metric.toFixed(6) + '</strong> &rarr; Best <strong>' +
+              d.best_metric.toFixed(6) + '</strong> (' + (pct > 0 ? '+' : '') + pct + '%)';
+          }
+          if (d.status === 'completed') { document.getElementById('artifacts').style.display = 'block'; break; }
+          if (d.status === 'failed') {
+            const eb = document.getElementById('error-box');
+            eb.style.display = 'block'; eb.textContent = d.error || 'Job failed.'; break;
+          }
+          delay = 2000;
+        } catch (_) { /* network blip, retry */ }
+      }
+    }
+  </script>
+</body>
+</html>
